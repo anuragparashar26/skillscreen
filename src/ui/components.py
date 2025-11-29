@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 import streamlit as st
 
-from src.config import get_settings, set_google_api_key_in_env
 from src.ai.evaluator import Evaluator
 
 
@@ -229,7 +228,6 @@ def run_app() -> None:
         st.session_state.user_api_key = ""
 
     st.sidebar.title("Configuration")
-    settings = get_settings()
 
     # Use session state to store user's API key (per-user, not shared across sessions)
     google_key_input = st.sidebar.text_input(
@@ -243,14 +241,12 @@ def run_app() -> None:
     if google_key_input != st.session_state.user_api_key:
         st.session_state.user_api_key = google_key_input
     
-    # Determine which API key to use (user's session key takes priority)
-    active_api_key = st.session_state.user_api_key or settings.google_api_key
+    # Use ONLY the user's session key - never use environment variables (shared on Streamlit Cloud)
+    active_api_key = st.session_state.user_api_key
     
-    if active_api_key:
-        # Set it in env only for this request (for downstream libraries like google-generativeai)
-        set_google_api_key_in_env(active_api_key)
-    else:
-        st.sidebar.warning("Google API key required. Get one from [Google AI Studio](https://aistudio.google.com/app/apikey).")
+    if not active_api_key:
+        st.sidebar.warning("⚠️ Google API key required. Get one from [Google AI Studio](https://aistudio.google.com/app/apikey).")
+        st.sidebar.info("Your API key is private and only stored in your browser session.")
 
     # Check for optional Supabase
     supabase_client = get_supabase_client()
@@ -371,7 +367,8 @@ def run_app() -> None:
         resumes = [parse_resume(f) for f in uploaded_files]
 
         with st.spinner("Evaluating resumes..."):
-            evaluator = Evaluator()
+            # Pass the user's API key explicitly - never use environment variables
+            evaluator = Evaluator(google_api_key=active_api_key)
             try:
                 results = evaluator.evaluate(job_description=job_description, resumes=resumes)
             except Exception as e:

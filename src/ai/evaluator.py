@@ -2,15 +2,12 @@
 from __future__ import annotations
 
 import logging
-import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.runnables import RunnablePassthrough
 
 from src.ai.embeddings import ChromaManager
 from src.ai.prompts import EVALUATION_PROMPT, evaluation_parser
-from src.config import set_google_api_key_in_env, get_settings
 
 
 logger = logging.getLogger(__name__)
@@ -19,18 +16,21 @@ logger = logging.getLogger(__name__)
 class Evaluator:
     """Evaluator that computes embeddings similarity, calls LLM and merges results."""
 
-    def __init__(self, google_api_key: Optional[str] = None):
-        set_google_api_key_in_env(google_api_key)
+    def __init__(self, google_api_key: str):
+        """Initialize evaluator with explicit API key.
+        
+        Args:
+            google_api_key: Required Google API key for Gemini. Must be provided explicitly.
+        """
+        if not google_api_key:
+            raise ValueError("Google API key is required")
+        
         self.chroma = ChromaManager()
         
-        # Configure LangChain with Google Generative AI
-        settings = get_settings()
-        api_key = google_api_key or settings.google_api_key or os.environ.get("GOOGLE_API_KEY")
-        
-        # Initialize LangChain ChatGoogleGenerativeAI
+        # Initialize LangChain ChatGoogleGenerativeAI with explicit key (no env fallback)
         self.llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash",
-            google_api_key=api_key,
+            google_api_key=google_api_key,
             temperature=0.3,
             convert_system_message_to_human=True
         )
