@@ -19,15 +19,15 @@ A single-page Streamlit app that helps recruiters evaluate and rank resumes agai
 
 ## Tech Stack
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Frontend** | Streamlit | Interactive web UI |
-| **LLM** | Google Gemini 2.0 Flash | Resume evaluation & scoring |
-| **LLM Framework** | LangChain | Prompt orchestration & output parsing |
-| **Embeddings** | sentence-transformers (all-MiniLM-L6-v2) | Text vectorization |
-| **Vector Store** | ChromaDB | In-memory similarity search |
-| **Database** | Supabase (PostgreSQL) | Optional persistent storage |
-| **Document Parsing** | PyPDF2, python-docx | Resume text extraction |
+| Component            | Technology                               | Purpose                               |
+| -------------------- | ---------------------------------------- | ------------------------------------- |
+| **Frontend**         | Streamlit                                | Interactive web UI                    |
+| **LLM**              | Google Gemini 2.0 Flash                  | Resume evaluation & scoring           |
+| **LLM Framework**    | LangChain                                | Prompt orchestration & output parsing |
+| **Embeddings**       | sentence-transformers (all-MiniLM-L6-v2) | Text vectorization                    |
+| **Vector Store**     | ChromaDB                                 | In-memory similarity search           |
+| **Database**         | Supabase (PostgreSQL)                    | Optional persistent storage           |
+| **Document Parsing** | PyPDF2, python-docx                      | Resume text extraction                |
 
 ## Project Structure
 
@@ -81,6 +81,7 @@ pip install -r requirements.txt
 3. **Configure Google API Key**
 
    **For local development:**
+
    ```bash
    # Create secrets file
    cp .streamlit/secrets.toml.example .streamlit/secrets.toml
@@ -88,6 +89,7 @@ pip install -r requirements.txt
    ```
 
    **For Streamlit Cloud deployment:**
+
    - Go to your app's dashboard → Settings → Secrets
    - Add: `GOOGLE_API_KEY = "your-google-api-key-here"`
 
@@ -163,9 +165,9 @@ CREATE POLICY "Allow anonymous delete on evaluation_results" ON evaluation_resul
 
 ## Storage Options
 
-| Mode | Description | Data Persistence |
-|------|-------------|------------------|
-| **Session (default)** | History stored in Streamlit session_state | Cleared on page refresh |
+| Mode                    | Description                                  | Data Persistence         |
+| ----------------------- | -------------------------------------------- | ------------------------ |
+| **Session (default)**   | History stored in Streamlit session_state    | Cleared on page refresh  |
 | **Supabase (optional)** | User provides their own Supabase credentials | Persists across sessions |
 
 ## How It Works
