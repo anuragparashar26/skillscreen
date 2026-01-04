@@ -226,15 +226,46 @@ def run_app() -> None:
     # Get Google API key from Streamlit Cloud secrets
     # To configure: Add GOOGLE_API_KEY in Streamlit Cloud Dashboard -> App Settings -> Secrets
     # Format in secrets: GOOGLE_API_KEY = "your-api-key-here"
-    active_api_key = st.secrets.get("GOOGLE_API_KEY", "")
+    default_api_key = st.secrets.get("GOOGLE_API_KEY", "")
     
     st.sidebar.title("Configuration")
     
-    if active_api_key:
-        st.sidebar.success("✅ Google API Key configured")
+    # Allow users to provide their own API key
+    st.sidebar.markdown("### Google Gemini API Key")
+    user_api_key = st.sidebar.text_input(
+        "Enter your API key (optional)",
+        type="password",
+        help="Provide your own Google Gemini API key if the default one is exhausted. Get one at https://aistudio.google.com/app/apikey",
+        placeholder="Your API key here..."
+    )
+    
+    # Use user's key if provided, otherwise use default
+    active_api_key = user_api_key.strip() if user_api_key.strip() else default_api_key
+    
+    if user_api_key.strip():
+        st.sidebar.success("Using your custom API key")
+    elif default_api_key:
+        st.sidebar.success("Using default API key")
     else:
-        st.sidebar.error("❌ Google API Key not configured")
-        st.sidebar.info("Admin: Add GOOGLE_API_KEY to Streamlit Cloud secrets.")
+        st.sidebar.error("No API Key configured")
+        st.sidebar.info("Please provide your own Google Gemini API key above, or contact the admin to configure a default key.")
+    
+    # Model selection
+    st.sidebar.markdown("### Gemini Model")
+    selected_model = st.sidebar.selectbox(
+        "Choose model",
+        options=[
+            "gemini-2.5-flash",
+            "gemini-2.5-pro",
+            "gemini-2.0-flash-exp",
+            "gemini-2.0-flash",
+            "gemini-exp-1206",
+            "gemini-flash-latest",
+            "gemini-pro-latest"
+        ],
+        index=0,
+        help="Try different models if you encounter quota issues. Each model has separate quotas."
+    )
 
     # Check for optional Supabase
     supabase_client = get_supabase_client()
@@ -348,7 +379,7 @@ def run_app() -> None:
 
         # Check API key
         if not active_api_key:
-            st.error("Google API Key not configured. Please contact the admin to add GOOGLE_API_KEY to Streamlit Cloud secrets.")
+            st.error("Google API Key not configured. Please provide your own API key in the sidebar or contact the admin.")
             return
 
         # parse resumes
@@ -356,12 +387,17 @@ def run_app() -> None:
 
         with st.spinner("Evaluating resumes..."):
             # Pass the user's API key explicitly - never use environment variables
-            evaluator = Evaluator(google_api_key=active_api_key)
+            evaluator = Evaluator(google_api_key=active_api_key, model=selected_model)
             try:
                 results = evaluator.evaluate(job_description=job_description, resumes=resumes)
             except Exception as e:
                 logger.exception("Evaluation failed")
-                st.error(f"Evaluation failed: {e}")
+                error_msg = str(e)
+                if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+                    st.error(f"API quota exhausted for model '{selected_model}'")
+                    st.info("Solutions:\n- Get a new API key: https://aistudio.google.com/app/apikey\n- Try a different model from the sidebar\n- Wait for quota to reset (usually resets daily)")
+                else:
+                    st.error(f"Evaluation failed: {error_msg}")
                 return
 
         if not results:

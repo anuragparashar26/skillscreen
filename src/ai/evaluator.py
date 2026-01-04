@@ -16,20 +16,22 @@ logger = logging.getLogger(__name__)
 class Evaluator:
     """Evaluator that computes embeddings similarity, calls LLM and merges results."""
 
-    def __init__(self, google_api_key: str):
+    def __init__(self, google_api_key: str, model: str = "gemini-2.5-flash"):
         """Initialize evaluator with explicit API key.
         
         Args:
             google_api_key: Required Google API key for Gemini. Must be provided explicitly.
+            model: Gemini model to use. Default: gemini-2.5-flash
         """
         if not google_api_key:
             raise ValueError("Google API key is required")
         
         self.chroma = ChromaManager()
+        self.model = model
         
         # Initialize LangChain ChatGoogleGenerativeAI with explicit key (no env fallback)
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
+            model=model,
             google_api_key=google_api_key,
             temperature=0.3,
             convert_system_message_to_human=True
@@ -50,9 +52,17 @@ class Evaluator:
             return result
         except Exception as e:
             logger.exception("LLM call failed")
+            error_msg = str(e)
+            if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+                return {
+                    "score": 0,
+                    "summary": f"API quota exhausted for model '{self.model}'. Please get a new API key from https://aistudio.google.com/app/apikey or try a different model.",
+                    "matching_skills": [],
+                    "missing_skills": []
+                }
             return {
                 "score": 0,
-                "summary": f"(LLM failed: {str(e)[:100]})",
+                "summary": f"(LLM failed: {error_msg[:150]})",
                 "matching_skills": [],
                 "missing_skills": []
             }
